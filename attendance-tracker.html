@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WFM Attendance Tracker &amp; Dashboard</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel-2:#273449; --line:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --accent-2:#818cf8;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --purple:#a78bfa;
+    --radius:14px; --shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:linear-gradient(160deg,#0b1220,#0f172a 40%,#111a2e); color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    padding:22px 28px; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap; border-bottom:1px solid var(--line);
+    background:rgba(15,23,42,.6); backdrop-filter:blur(6px); position:sticky; top:0; z-index:20;
+  }
+  .brand{display:flex; align-items:center; gap:14px}
+  .logo{
+    width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#07121f;font-size:20px;
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:19px;margin:0}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select,input,button{
+    font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;padding:9px 12px;outline:none;
+  }
+  select:focus,input:focus{border-color:var(--accent)}
+  button{cursor:pointer;transition:.15s;background:var(--panel-2)}
+  button:hover{border-color:var(--accent);transform:translateY(-1px)}
+  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#07121f;border:none;font-weight:700}
+  button.danger{border-color:#7f1d1d;color:#fca5a5}
+  main{padding:22px 28px;max-width:1280px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:22px}
+  .card{
+    background:linear-gradient(160deg,var(--panel),var(--panel-2));border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .card::after{content:"";position:absolute;right:-20px;top:-20px;width:70px;height:70px;border-radius:50%;opacity:.15;background:var(--accent)}
+  .card .label{color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+  .card .value{font-size:30px;font-weight:800;margin-top:6px}
+  .card .meta{font-size:12px;margin-top:6px;color:var(--muted)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .ok{background:rgba(34,197,94,.15);color:#86efac}
+  .warn{background:rgba(245,158,11,.15);color:#fcd34d}
+  .bad{background:rgba(239,68,68,.15);color:#fca5a5}
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:22px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .panel h2{margin:0 0 14px;font-size:15px}
+  .bars{display:flex;flex-direction:column;gap:12px}
+  .bar-row{display:grid;grid-template-columns:120px 1fr 46px;align-items:center;gap:10px;font-size:13px}
+  .track{height:12px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+  .fill{height:100%;border-radius:999px;transition:width .5s}
+  .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+  .legend span{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:10px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none}
+  tbody tr:hover{background:var(--panel-2)}
+  .status{padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;display:inline-block}
+  .s-present{background:rgba(34,197,94,.15);color:#86efac}
+  .s-late{background:rgba(245,158,11,.18);color:#fcd34d}
+  .s-absent{background:rgba(239,68,68,.16);color:#fca5a5}
+  .s-leave{background:rgba(129,140,248,.18);color:#c7d2fe}
+  .s-vto{background:rgba(56,189,248,.16);color:#7dd3fc}
+  .row-actions button{padding:5px 9px;font-size:12px}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .muted{color:var(--muted)}
+  footer{padding:18px 28px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:20px}
+  .empty{padding:30px;text-align:center;color:var(--muted)}
+  dialog{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:var(--radius);max-width:560px;width:92%;box-shadow:var(--shadow)}
+  dialog::backdrop{background:rgba(2,6,23,.6);backdrop-filter:blur(2px)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">ISA</div>
+    <div>
+      <h1>WFM Attendance Tracker</h1>
+      <div class="sub">Real-Time Management &middot; Manila &middot; BAQ &middot; GUA</div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <select id="siteFilter"><option value="">All Sites</option></select>
+    <select id="accountFilter"><option value="">All Accounts</option></select>
+    <input type="date" id="dateFilter" title="Filter by date" />
+    <button id="importBtn" title="Import CSV">⬆ Import CSV</button>
+    <button id="exportBtn" title="Export CSV">⬇ Export CSV</button>
+    <button class="primary" id="addBtn">＋ Add Record</button>
+    <input type="file" id="fileInput" accept=".csv" style="display:none" />
+  </div>
+</header>
+
+<main>
+  <!-- KPI cards -->
+  <section class="cards" id="kpis"></section>
+
+  <!-- Charts -->
+  <div class="grid2">
+    <div class="panel">
+      <h2>Attendance by Day</h2>
+      <div class="bars" id="dayBars"></div>
+    </div>
+    <div class="panel">
+      <h2>Status Breakdown</h2>
+      <div class="donut-wrap">
+        <svg id="donut" width="170" height="170" viewBox="0 0 42 42"></svg>
+        <div class="legend" id="donutLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="panel">
+    <div class="filters">
+      <input type="search" id="search" placeholder="Search agent / ID…" style="flex:1;min-width:200px" />
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option>Present</option><option>Late</option><option>Absent</option>
+        <option>Leave</option><option>VTO</option>
+      </select>
+      <button class="danger" id="clearBtn">Clear All</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-k="date">Date ▾</th>
+            <th data-k="agentId">Agent ID</th>
+            <th data-k="agent">Agent</th>
+            <th data-k="site">Site</th>
+            <th data-k="account">Account</th>
+            <th data-k="shift">Shift</th>
+            <th data-k="status">Status</th>
+            <th data-k="adherence">Adherence %</th>
+            <th data-k="minutesLate">Min Late</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyState" style="display:none">No records yet — click <b>＋ Add Record</b> or <b>Import CSV</b>.</div>
+  </div>
+</main>
+
+<footer>
+  Built for the LeanGroup / Caliber WFM team · Data saved locally in your browser (localStorage) · Ready for GitHub Pages
+</footer>
+
+<!-- Add/Edit dialog -->
+<dialog id="dlg">
+  <form method="dialog" id="recForm" style="padding:20px">
+    <h2 style="margin:0 0 16px" id="dlgTitle">Add Record</h2>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input type="date" name="date" required></div>
+      <div class="field"><label>Agent ID</label><input name="agentId" placeholder="e.g. A1042" required></div>
+      <div class="field"><label>Agent Name</label><input name="agent" placeholder="e.g. J. Dela Cruz" required></div>
+      <div class="field"><label>Site</label>
+        <select name="site"><option>Manila</option><option>BAQ</option><option>GUA</option></select></div>
+      <div class="field"><label>Account</label>
+        <select name="account"><option>OnTrac</option><option>Caliber</option><option>Crane Worldwide</option></select></div>
+      <div class="field"><label>Shift</label><input name="shift" placeholder="e.g. 09:00-18:00"></div>
+      <div class="field"><label>Status</label>
+        <select name="status"><option>Present</option><option>Late</option><option>Absent</option><option>Leave</option><option>VTO</option></select></div>
+      <div class="field"><label>Adherence %</label><input type="number" name="adherence" min="0" max="100" step="0.1" placeholder="95"></div>
+      <div class="field"><label>Minutes Late</label><input type="number" name="minutesLate" min="0" step="1" placeholder="0"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="cancelBtn">Cancel</button>
+      <button class="primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY = "wfm_attendance_v1";
+const BENCH = { adherence:95, attendance:95 };
+let data = load();
+
+function load(){
+  try{ const r = JSON.parse(localStorage.getItem(KEY)); if(Array.isArray(r)) return r; }catch(e){}
+  return seed();
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+
+function seed(){
+  const agents=[["A1001","J. Dela Cruz","Manila","OnTrac"],["A1002","M. Reyes","Manila","OnTrac"],
+    ["A1003","C. Santos","Manila","Caliber"],["B2001","L. Gómez","BAQ","Caliber"],
+    ["B2002","D. Rojas","BAQ","Crane Worldwide"],["G3001","P. Morales","GUA","OnTrac"],
+    ["G3002","R. Castillo","GUA","Crane Worldwide"],["A1004","K. Tan","Manila","Caliber"]];
+  const statuses=["Present","Present","Present","Late","Present","Absent","Present","Leave"];
+  const out=[]; const today=new Date();
+  for(let d=4; d>=0; d--){
+    const dt=new Date(today); dt.setDate(today.getDate()-d);
+    const ds=dt.toISOString().slice(0,10);
+    agents.forEach((a,i)=>{
+      const st=statuses[(i+d)%statuses.length];
+      const late = st==="Late"? (5+((i*7+d)%25)) : 0;
+      let adh = st==="Absent"||st==="Leave"? 0 : st==="Late"? 82+((i+d)%10) : 94+((i+d)%6);
+      if(adh>100)adh=100;
+      out.push({id:crypto.randomUUID(),date:ds,agentId:a[0],agent:a[1],site:a[2],account:a[3],
+        shift:"09:00-18:00",status:st,adherence:adh,minutesLate:late});
+    });
+  }
+  return out;
+}
+
+/* ---------- Filters & state ---------- */
+const el = id => document.getElementById(id);
+let sortKey="date", sortDir=-1;
+
+function filtered(){
+  const s=el("siteFilter").value, a=el("accountFilter").value, d=el("dateFilter").value,
+        st=el("statusFilter").value, q=el("search").value.toLowerCase().trim();
+  return data.filter(r=>
+    (!s||r.site===s)&&(!a||r.account===a)&&(!d||r.date===d)&&(!st||r.status===st)&&
+    (!q||(r.agent+" "+r.agentId).toLowerCase().includes(q))
+  ).sort((x,y)=>{
+    let vx=x[sortKey], vy=y[sortKey];
+    if(typeof vx==="number") return (vx-vy)*sortDir;
+    return String(vx).localeCompare(String(vy))*sortDir;
+  });
+}
+
+/* ---------- KPIs ---------- */
+function renderKPIs(rows){
+  const total=rows.length;
+  const present=rows.filter(r=>r.status==="Present").length;
+  const late=rows.filter(r=>r.status==="Late").length;
+  const absent=rows.filter(r=>r.status==="Absent").length;
+  const leave=rows.filter(r=>r.status==="Leave").length;
+  const scheduled=total-leave; // leave excluded from attendance base
+  const attended=present+late;
+  const attRate= scheduled? (attended/scheduled*100):0;
+  const worked=rows.filter(r=>r.status==="Present"||r.status==="Late");
+  const avgAdh= worked.length? worked.reduce((s,r)=>s+(+r.adherence||0),0)/worked.length:0;
+  // shrinkage proxy = unplanned (absent) + planned (leave) out of total scheduled population
+  const shrink= total? ((absent+leave)/total*100):0;
+  const verdict=(v,b)=> v>=b? '<span class="pill ok">On Target</span>':
+                         v>=b-5? '<span class="pill warn">Watch</span>':'<span class="pill bad">Below</span>';
+  const cards=[
+    {label:"Attendance Rate", value:attRate.toFixed(1)+"%", meta:verdict(attRate,BENCH.attendance)+" · target ≥95%"},
+    {label:"Avg Adherence", value:avgAdh.toFixed(1)+"%", meta:verdict(avgAdh,BENCH.adherence)+" · target ≥95%"},
+    {label:"Shrinkage", value:shrink.toFixed(1)+"%", meta:(shrink<=30?'<span class="pill ok">OK</span>':'<span class="pill bad">High</span>')+" · target ~30%"},
+    {label:"Absences", value:absent, meta:leave+" on leave · "+late+" late"},
+    {label:"Records", value:total, meta:present+" present"},
+  ];
+  el("kpis").innerHTML=cards.map(c=>`
+    <div class="card"><div class="label">${c.label}</div>
+    <div class="value">${c.value}</div><div class="meta">${c.meta}</div></div>`).join("");
+}
+
+/* ---------- Day bars ---------- */
+function renderDayBars(rows){
+  const byDay={};
+  rows.forEach(r=>{ byDay[r.date]=byDay[r.date]||{p:0,t:0}; if(r.status!=="Leave"){byDay[r.date].t++; if(r.status==="Present"||r.status==="Late")byDay[r.date].p++;} });
+  const days=Object.keys(byDay).sort();
+  if(!days.length){ el("dayBars").innerHTML='<div class="muted">No data</div>'; return; }
+  el("dayBars").innerHTML=days.map(d=>{
+    const o=byDay[d]; const pct=o.t? o.p/o.t*100:0;
+    const col=pct>=95?"var(--green)":pct>=85?"var(--amber)":"var(--red)";
+    return `<div class="bar-row"><span class="muted">${d}</span>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${col}"></div></div>
+      <span>${pct.toFixed(0)}%</span></div>`;
+  }).join("");
+}
+
+/* ---------- Donut ---------- */
+function renderDonut(rows){
+  const colors={Present:"var(--green)",Late:"var(--amber)",Absent:"var(--red)",Leave:"var(--purple)",VTO:"var(--accent)"};
+  const counts={}; rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);
+  const total=rows.length||1;
+  let offset=25; const svg=el("donut"); svg.innerHTML="";
+  svg.insertAdjacentHTML("beforeend",`<circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="var(--panel-2)" stroke-width="5"></circle>`);
+  Object.keys(colors).forEach(k=>{
+    const v=counts[k]||0; if(!v)return; const pct=v/total*100;
+    svg.insertAdjacentHTML("beforeend",
+      `<circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="${colors[k]}" stroke-width="5"
+       stroke-dasharray="${pct} ${100-pct}" stroke-dashoffset="${offset}"></circle>`);
+    offset-=pct;
+  });
+  svg.insertAdjacentHTML("beforeend",`<text x="21" y="20" text-anchor="middle" font-size="6" fill="#e2e8f0" font-weight="700">${rows.length}</text><text x="21" y="26" text-anchor="middle" font-size="3" fill="#94a3b8">records</text>`);
+  el("donutLegend").innerHTML=Object.keys(colors).map(k=>{
+    const v=counts[k]||0; return `<div><span style="background:${colors[k]}"></span>${k} — <b>${v}</b></div>`;}).join("");
+}
+
+/* ---------- Table ---------- */
+function renderTable(rows){
+  const tb=el("tbody");
+  el("emptyState").style.display=rows.length?"none":"block";
+  tb.innerHTML=rows.map(r=>`
+    <tr>
+      <td>${r.date}</td><td>${r.agentId}</td><td>${r.agent}</td><td>${r.site}</td>
+      <td>${r.account}</td><td>${r.shift||"—"}</td>
+      <td><span class="status s-${r.status.toLowerCase()}">${r.status}</span></td>
+      <td>${(+r.adherence||0).toFixed(1)}</td><td>${r.minutesLate||0}</td>
+      <td class="row-actions"><button data-edit="${r.id}">Edit</button>
+      <button class="danger" data-del="${r.id}">Del</button></td>
+    </tr>`).join("");
+}
+
+function renderAll(){
+  const rows=filtered();
+  renderKPIs(rows); renderDayBars(rows); renderDonut(rows); renderTable(rows);
+  // Dashboard KPIs use ALL filtered rows; keep selects populated
+}
+function refreshSelects(){
+  const sites=[...new Set(data.map(r=>r.site))].sort();
+  const accs=[...new Set(data.map(r=>r.account))].sort();
+  fillSelect("siteFilter",sites,"All Sites");
+  fillSelect("accountFilter",accs,"All Accounts");
+}
+function fillSelect(id,vals,allLabel){
+  const s=el(id); const cur=s.value;
+  s.innerHTML=`<option value="">${allLabel}</option>`+vals.map(v=>`<option>${v}</option>`).join("");
+  if(vals.includes(cur))s.value=cur;
+}
+
+/* ---------- Events ---------- */
+["siteFilter","accountFilter","dateFilter","statusFilter","search"].forEach(id=>
+  el(id).addEventListener("input",renderAll));
+
+document.querySelectorAll("th[data-k]").forEach(th=>th.addEventListener("click",()=>{
+  const k=th.dataset.k; if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=1;}
+  renderAll();
+}));
+
+el("tbody").addEventListener("click",e=>{
+  const ed=e.target.dataset.edit, dl=e.target.dataset.del;
+  if(ed) openDialog(data.find(r=>r.id===ed));
+  if(dl){ if(confirm("Delete this record?")){ data=data.filter(r=>r.id!==dl); save(); refreshSelects(); renderAll(); } }
+});
+
+/* Dialog */
+const dlg=el("dlg"), form=el("recForm"); let editId=null;
+function openDialog(rec){
+  editId=rec?rec.id:null;
+  el("dlgTitle").textContent=rec?"Edit Record":"Add Record";
+  form.date.value=rec?rec.date:new Date().toISOString().slice(0,10);
+  form.agentId.value=rec?rec.agentId:""; form.agent.value=rec?rec.agent:"";
+  form.site.value=rec?rec.site:"Manila"; form.account.value=rec?rec.account:"OnTrac";
+  form.shift.value=rec?rec.shift:""; form.status.value=rec?rec.status:"Present";
+  form.adherence.value=rec?rec.adherence:""; form.minutesLate.value=rec?rec.minutesLate:"";
+  dlg.showModal();
+}
+el("addBtn").onclick=()=>openDialog(null);
+el("cancelBtn").onclick=()=>dlg.close();
+form.addEventListener("submit",()=>{
+  const rec={
+    id:editId||crypto.randomUUID(), date:form.date.value, agentId:form.agentId.value.trim(),
+    agent:form.agent.value.trim(), site:form.site.value, account:form.account.value,
+    shift:form.shift.value.trim(), status:form.status.value,
+    adherence:+form.adherence.value||0, minutesLate:+form.minutesLate.value||0
+  };
+  if(editId){ const i=data.findIndex(r=>r.id===editId); data[i]=rec; }
+  else data.push(rec);
+  save(); refreshSelects(); renderAll();
+});
+
+/* CSV */
+el("exportBtn").onclick=()=>{
+  const cols=["date","agentId","agent","site","account","shift","status","adherence","minutesLate"];
+  const csv=[cols.join(",")].concat(
+    data.map(r=>cols.map(c=>`"${String(r[c]??"").replace(/"/g,'""')}"`).join(","))).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="attendance.csv"; a.click(); URL.revokeObjectURL(url);
+};
+el("importBtn").onclick=()=>el("fileInput").click();
+el("fileInput").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const lines=rd.result.split(/\r?\n/).filter(Boolean);
+      const hdr=parseCSVLine(lines[0]).map(h=>h.trim());
+      const rows=lines.slice(1).map(l=>{
+        const v=parseCSVLine(l); const o={}; hdr.forEach((h,i)=>o[h]=v[i]??"");
+        return {id:crypto.randomUUID(),date:o.date,agentId:o.agentId,agent:o.agent,site:o.site,
+          account:o.account,shift:o.shift,status:o.status||"Present",
+          adherence:+o.adherence||0,minutesLate:+o.minutesLate||0};
+      }).filter(r=>r.date&&r.agentId);
+      if(rows.length){ data=data.concat(rows); save(); refreshSelects(); renderAll();
+        alert("Imported "+rows.length+" records."); }
+      else alert("No valid rows found. Expected headers: date,agentId,agent,site,account,shift,status,adherence,minutesLate");
+    }catch(err){ alert("Import failed: "+err.message); }
+  };
+  rd.readAsText(f); e.target.value="";
+};
+function parseCSVLine(line){
+  const out=[]; let cur="",q=false;
+  for(let i=0;i<line.length;i++){ const c=line[i];
+    if(q){ if(c=='"'){ if(line[i+1]=='"'){cur+='"';i++;} else q=false;} else cur+=c; }
+    else { if(c=='"')q=true; else if(c==','){out.push(cur);cur="";} else cur+=c; } }
+  out.push(cur); return out;
+}
+
+el("clearBtn").onclick=()=>{ if(confirm("Delete ALL records?")){ data=[]; save(); refreshSelects(); renderAll(); } };
+
+/* Init */
+refreshSelects(); renderAll();
+</script>
+</body>
+</html>
